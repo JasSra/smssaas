@@ -2,7 +2,12 @@ services:
   api:
     build: ./api
     ports:
+      # 127.0.0.1 — for ADB reverse tunnel from phones (USB or WiFi); the
+      #             tunnel forwards phone-localhost:8300 → host-loopback:8300.
+      # 10.10.0.1 — for inboxr-cloud on the overlay network (10.10.0.0/24).
+      #             Optional — drop if you don't run a separate cloud host.
       - "127.0.0.1:8300:8300"
+      - "10.10.0.1:8300:8300"
     volumes:
       - ./data:/data
     environment:
