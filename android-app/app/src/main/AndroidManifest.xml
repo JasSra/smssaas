@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.smssaas.app">
+
+    <!-- SMS -->
+    <uses-permission android:name="android.permission.SEND_SMS"/>
+    <uses-permission android:name="android.permission.RECEIVE_SMS"/>
+    <uses-permission android:name="android.permission.READ_SMS"/>
+
+    <!-- Voice / telephony -->
+    <uses-permission android:name="android.permission.CALL_PHONE"/>
+    <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
+    <uses-permission android:name="android.permission.READ_CALL_LOG"/>
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS"/>
+    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS"/>
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+
+    <!-- System-level — grant via ADB: pm grant com.smssaas.app android.permission.CAPTURE_AUDIO_OUTPUT -->
+    <uses-permission android:name="android.permission.CAPTURE_AUDIO_OUTPUT"/>
+
+    <!-- Sensor pod (camera, mic, env sensors, wifi scan) -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+
+    <!-- Services / system -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <application
+        android:allowBackup="false"
+        android:label="SmsSaaS"
+        android:usesCleartextTraffic="true"
+        android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
+
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- SMS worker foreground service -->
+        <service
+            android:name=".SmsWorkerService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false"/>
+
+        <!-- Voice worker foreground service -->
+        <service
+            android:name=".VoiceWorkerService"
+            android:foregroundServiceType="microphone|phoneCall"
+            android:exported="false"/>
+
+        <!-- Sensor pod foreground service -->
+        <service
+            android:name=".SensorWorkerService"
+            android:foregroundServiceType="camera|microphone|dataSync"
+            android:exported="false"/>
+
+        <!-- InCallService — intercepts calls and auto-answers -->
+        <service
+            android:name=".SmsaasInCallService"
+            android:permission="android.permission.BIND_INCALL_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.telecom.InCallService"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.telecom.IN_CALL_SERVICE_UI"
+                android:value="true"/>
+        </service>
+
+        <!-- SMS broadcast receivers -->
+        <receiver
+            android:name=".SmsSentReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.smssaas.app.SMS_SENT"/>
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".SmsDeliveredReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.smssaas.app.SMS_DELIVERED"/>
+            </intent-filter>
+        </receiver>
+
+        <!-- Inbound SMS receiver — highest priority to capture before AOSP handler -->
+        <receiver
+            android:name=".SmsReceiveReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="999">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED"/>
+            </intent-filter>
+        </receiver>
+
+        <!-- Auto-start on boot, or via `adb shell am broadcast -n com.smssaas.app/.BootReceiver -a com.smssaas.app.START_WORKER` -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="com.smssaas.app.START_WORKER"/>
+            </intent-filter>
+        </receiver>
+
+    </application>
+</manifest>

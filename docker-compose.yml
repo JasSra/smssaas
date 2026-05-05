@@ -1,0 +1,44 @@
+services:
+  api:
+    build: ./api
+    ports:
+      - "127.0.0.1:8300:8300"
+    volumes:
+      - ./data:/data
+    environment:
+      DB_PATH: /data/smssaas.db
+      DATA_DIR: /data
+      ADMIN_KEY: ${ADMIN_KEY:-changeme}
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      CLOUD_WEBHOOK_URL: ${CLOUD_WEBHOOK_URL:-}
+      CLOUD_WEBHOOK_KEY: ${CLOUD_WEBHOOK_KEY:-}
+      # OPENAI_API_KEY / ANTHROPIC_API_KEY / *_MODEL come from env_file below.
+      # Don't restate them here — the {VAR:-} substitution form blanks the
+      # value when the host shell hasn't exported it (overrides env_file).
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8300/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  adb-bridge:
+    build: ./adb-bridge
+    privileged: true
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+      - ./data/adbkey:/root/.android   # persist ADB key across rebuilds (avoid re-auth on phone)
+    network_mode: host        # so adb reverse reaches host port 8300
+    environment:
+      API_BASE: http://127.0.0.1:8300
+      ADMIN_KEY: ${ADMIN_KEY:-changeme}
+      DEVICE_SECRET: ${DEVICE_SECRET:-smssaas-worker-secret}
+      TUNNEL_PORT: "8300"
+    env_file:
+      - .env
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy

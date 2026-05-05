@@ -1,0 +1,57 @@
+# SmsSaaS public Docker compose — for self-hosters.
+#
+# Quick start (requires a Pixel + SIM passed through to the host):
+#
+#   wget https://raw.githubusercontent.com/JasSra/smssaas/main/docker-compose.public.yml -O docker-compose.yml
+#   wget https://raw.githubusercontent.com/JasSra/smssaas/main/.env.example -O .env
+#   # edit .env: ADMIN_KEY, DEVICE_SECRET, CLOUD_WEBHOOK_URL/KEY
+#   docker compose up -d
+#
+# Then plug a Pixel into the host with USB debugging, accept the ADB prompt,
+# and the adb-bridge container picks it up automatically.
+#
+# Voice + IVR features need OPENAI_API_KEY (TTS) and ANTHROPIC_API_KEY (AI flow
+# generation) in .env — both optional. Without them, IVR still works but the
+# audio is robotic (pyttsx3) and the "Generate from description" feature 502s.
+
+services:
+  api:
+    image: jassra/smssaas-api:latest
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      # Bind to localhost only by default; expose to your overlay net by editing
+      # to e.g. 10.10.0.1:8300:8300 if your inboxr-cloud is on a different host.
+      - "127.0.0.1:8300:8300"
+    volumes:
+      - ./data:/data            # SQLite + recordings + voicemail + tts cache
+    env_file:
+      - .env
+    environment:
+      DB_PATH: /data/smssaas.db
+      DATA_DIR: /data
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8300/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  adb-bridge:
+    image: jassra/smssaas-adb-bridge:latest
+    pull_policy: always
+    privileged: true            # required for USB device access
+    restart: unless-stopped
+    network_mode: host          # so adb reverse tunnel reaches the api on the host
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb           # USB passthrough
+      - ./data/adbkey:/root/.android        # persist ADB key across rebuilds
+    env_file:
+      - .env
+    environment:
+      API_BASE: http://127.0.0.1:8300
+      TUNNEL_PORT: "8300"
+      USE_PYTHON_WORKER: "0"     # use the installed Android APK instead of the Python ADB shim
+    depends_on:
+      api:
+        condition: service_healthy

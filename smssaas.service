@@ -1,0 +1,20 @@
+# Systemd service for SmsSaaS API (runs directly without Docker)
+# Deploy to: /opt/smssaas/smssaas.service
+# Enable: systemctl enable /opt/smssaas/smssaas.service && systemctl start smssaas
+
+[Unit]
+Description=SmsSaaS API
+After=network.target
+
+[Service]
+User=dev
+WorkingDirectory=/opt/smssaas/api
+EnvironmentFile=/opt/smssaas/.env
+ExecStart=/opt/smssaas/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8300
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

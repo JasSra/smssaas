@@ -1,0 +1,35 @@
+# Don't commit live secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Local data dirs
+data/
+recordings/
+voicemail/
+tts_cache/
+
+# Android build outputs
+android-app/.gradle/
+android-app/build/
+android-app/app/build/
+android-app/local.properties
+android-app/.idea/
+android-app/*.iml
+*.apk
+*.aab
+
+# Keystores — never commit
+*.keystore
+*.jks
+debug.keystore
+
+# OS / editor
+.DS_Store
+.vscode/
+*.swp

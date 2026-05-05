@@ -1,0 +1,21 @@
+# Systemd service for the ADB bridge watcher (without Docker)
+# Requires adb installed on the host: apt install android-tools-adb
+# Deploy to: /opt/smssaas/smssaas-adb.service
+
+[Unit]
+Description=SmsSaaS ADB Bridge
+After=smssaas.service
+Requires=smssaas.service
+
+[Service]
+User=dev
+EnvironmentFile=/opt/smssaas/.env
+Environment=API_BASE=http://127.0.0.1:8300
+ExecStart=/opt/smssaas/adb-bridge/watcher.sh
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

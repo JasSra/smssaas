@@ -1,0 +1,49 @@
+SmsSaaS — Source-available license (1.0)
+Copyright (c) 2026 JasSra (jaskaranz@gmail.com)
+
+This software is "source-available" — the source code is provided so you can
+read it, fork it, audit it, and build it yourself. It is NOT an open-source
+license under the OSI definition. Commercial use requires a paid license from
+the copyright holder.
+
+Permitted use without a license:
+  1. Personal projects, learning, evaluation.
+  2. Internal use within a single organization that has fewer than 25
+     employees AND does not provide Inboxr-as-a-service to external
+     customers, AND does not embed this software in any paid product.
+
+Required license:
+  All other use, including but not limited to:
+    - Selling Inboxr (or a derivative) as a service to external customers.
+    - Embedding Inboxr (or a derivative) in any product offered for fee.
+    - Internal use within an organization larger than 25 employees.
+    - Any use by a government, defence, or financial-services entity that is
+      not strictly personal or evaluation.
+
+  Request a license at https://getinboxr.app/license/request.
+
+You may:
+  - Read, fork, and modify the code.
+  - Run unmodified or modified copies for permitted-use scenarios above.
+  - Submit pull requests; merged contributions are dual-licensed under this
+    license + the MIT license at the maintainer's option.
+
+You may not:
+  - Redistribute modified copies under a different name without explicit
+    permission, with the intent to compete with the official Inboxr service.
+  - Remove or alter copyright / license notices.
+  - Use this software for activities that violate applicable laws (e.g. SMS
+    spam, anti-circumvention of carrier rate limits at scale, fraud, etc.).
+
+Trademarks:
+  "Inboxr" and the Inboxr logo are unregistered trademarks of JasSra. You may
+  reference them factually (e.g. "Compatible with Inboxr") but you may not
+  use them to brand your own product or service.
+
+Warranty:
+  THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM,
+  DAMAGES, OR OTHER LIABILITY ARISING FROM USE OF THE SOFTWARE.
+
+If anything in here is unclear, email jaskaranz@gmail.com — we'd rather
+clarify in writing than have you guess wrong.
