@@ -1,6 +1,7 @@
 """Endpoints called by the Android app worker."""
 from fastapi import APIRouter, Header, HTTPException
 from datetime import datetime, timezone
+from typing import Optional
 import os
 import httpx
 
@@ -94,24 +95,66 @@ def command_ack(cmd_id: int, result: str = "done"):
 
 # ── Delivery receipt ──────────────────────────────────────────────────────────
 
+def _cloud_receipt_url() -> str:
+    """The cloud's receipt endpoint, derived from CLOUD_WEBHOOK_URL.
+
+    CLOUD_WEBHOOK_URL points at .../api/internal/sms/inbound — the receipt
+    sibling lives at .../api/internal/sms/receipt. Allow an explicit override
+    via CLOUD_RECEIPT_URL when the topology differs.
+    """
+    explicit = os.environ.get("CLOUD_RECEIPT_URL", "")
+    if explicit:
+        return explicit
+    if CLOUD_WEBHOOK_URL.endswith("/inbound"):
+        return CLOUD_WEBHOOK_URL[: -len("/inbound")] + "/receipt"
+    return ""
+
+
 @router.post("/receipt")
-def receipt(body: ReceiptPost):
+async def receipt(body: ReceiptPost):
     now = datetime.now(timezone.utc).isoformat()
+    new_status: str
+    error_msg: Optional[str] = None
     with db() as conn:
         conn.execute(
             "INSERT INTO delivery_receipts (message_id, result, error_code) VALUES (?,?,?)",
             (body.message_id, body.result, body.error_code),
         )
         if body.result in ("SENT", "DELIVERED"):
+            new_status = body.result.lower()
             conn.execute(
                 "UPDATE outbound_queue SET status=?, sent_at=? WHERE id=?",
-                (body.result.lower(), now, body.message_id),
+                (new_status, now, body.message_id),
             )
         else:
+            new_status = "failed"
+            error_msg = f"error_code={body.error_code}" if body.error_code is not None else body.result
             conn.execute(
                 "UPDATE outbound_queue SET status='failed', error_msg=? WHERE id=?",
-                (f"error_code={body.error_code}", body.message_id),
+                (error_msg, body.message_id),
             )
+
+    # Notify inboxr-cloud so it can update sms_messages.status and dispatch
+    # tenant webhooks. Best-effort — receipt is already persisted locally so
+    # the cloud can reconcile via /admin/messages if this call fails.
+    if CLOUD_WEBHOOK_KEY:
+        url = _cloud_receipt_url()
+        if url:
+            payload = {
+                "smssaas_id": body.message_id,
+                "status":     new_status,
+                "sent_at":    now if new_status in ("sent", "delivered") else None,
+                "error_msg":  error_msg,
+            }
+            try:
+                async with httpx.AsyncClient(timeout=5) as client:
+                    await client.post(
+                        url,
+                        json=payload,
+                        headers={"x-smssaas-key": CLOUD_WEBHOOK_KEY},
+                    )
+            except Exception as e:
+                print(f"[worker/receipt] cloud webhook error: {e}")
     return {"ok": True}
 
 
