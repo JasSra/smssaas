@@ -39,7 +39,16 @@ async def _anthropic(system: str, user: str, max_tokens: int = 1024) -> str:
                 "messages": [{"role": "user", "content": user}],
             },
         )
-        r.raise_for_status()
+        # Surface the upstream error text instead of letting raise_for_status
+        # bubble a generic 500 with a useless trace. The dashboard renders
+        # whatever message comes through here.
+        if r.status_code >= 400:
+            try:
+                body = r.json()
+                msg = (body.get("error") or {}).get("message") or body.get("message") or r.text
+            except Exception:
+                msg = r.text
+            raise AiError(f"Anthropic API {r.status_code}: {msg} (model={ANTHROPIC_MODEL})")
         data = r.json()
         parts = data.get("content", [])
         for p in parts:
